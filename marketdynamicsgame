@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Dynamics Game</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .action-btn {
+            transition: all 0.2s ease-in-out;
+        }
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        .selected {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.5);
+        }
+        .result-card {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 text-gray-800 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-4xl mx-auto p-4 md:p-8">
+        <div class="bg-white rounded-2xl shadow-xl p-6 md:p-10">
+            <header class="text-center mb-8">
+                <h1 class="text-4xl md:text-5xl font-bold text-gray-900">Market Dynamics Game</h1>
+                <p class="text-gray-600 mt-2 text-lg">Choose a scenario and play as the Buyer.</p>
+            </header>
+
+            <!-- Game Area -->
+            <main id="game-area">
+                <!-- Scenario Selection -->
+                <div id="scenario-selection" class="flex justify-center space-x-4 mb-8">
+                    <button id="market-btn" class="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-75 transition-colors duration-200 text-lg">
+                        Market
+                    </button>
+                    <button id="wildwest-btn" class="px-6 py-3 bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-400 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-opacity-75 transition-colors duration-200 text-lg">
+                        Wild West
+                    </button>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                    <!-- Player (Buyer) Section -->
+                    <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                        <h2 class="text-2xl font-semibold text-center mb-4">You (The Buyer)</h2>
+                        <p class="text-center text-gray-500 mb-6">Choose your action:</p>
+                        <div id="player-actions" class="flex flex-col space-y-3">
+                            <button data-action="cooperate" class="action-btn w-full text-lg py-3 px-4 rounded-lg font-semibold bg-green-500 text-white shadow-sm">Cooperate</button>
+                            <button data-action="exploit" class="action-btn w-full text-lg py-3 px-4 rounded-lg font-semibold bg-red-500 text-white shadow-sm">Exploit</button>
+                            <button data-action="forfeit" class="action-btn w-full text-lg py-3 px-4 rounded-lg font-semibold bg-yellow-500 text-white shadow-sm">Forfeit</button>
+                        </div>
+                        <div class="text-center mt-6">
+                            <p class="text-xl font-medium">Your Score: <span id="player-score" class="font-bold text-blue-600">0</span></p>
+                        </div>
+                    </div>
+
+                    <!-- Seller (Computer) Section -->
+                    <div class="bg-gray-50 p-6 rounded-xl border border-gray-200">
+                        <h2 class="text-2xl font-semibold text-center mb-4">The Seller (AI)</h2>
+                        <div id="seller-choice-display" class="flex items-center justify-center h-40 bg-gray-200 rounded-lg">
+                            <p id="seller-status" class="text-gray-500 text-lg">Waiting for your move...</p>
+                        </div>
+                        <div class="text-center mt-6">
+                             <p class="text-xl font-medium">Seller's Score: <span id="seller-score" class="font-bold text-red-600">0</span></p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Result Display -->
+                <div id="result-display" class="mt-8 text-center hidden">
+                     <div class="result-card bg-blue-50 border border-blue-200 p-6 rounded-xl inline-block">
+                        <h3 class="text-2xl font-bold mb-2 text-blue-800">Round Result</h3>
+                        <p id="result-text" class="text-lg text-blue-700"></p>
+                    </div>
+                </div>
+
+                 <!-- Controls -->
+                 <div id="controls" class="mt-8 text-center">
+                    <button id="next-round-btn" class="hidden px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg shadow-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-75 transition-colors duration-200 text-lg">
+                        Next Round
+                    </button>
+                </div>
+            </main>
+        </div>
+        <footer class="text-center mt-6 text-gray-500">
+            <p>Based on the game theory dynamics from "Market Interactions".</p>
+        </footer>
+    </div>
+
+    <script>
+        const marketPayoffs = {
+            cooperate: { cooperate: [10, 10], exploit: [-1, -8], forfeit: [0, 0] },
+            exploit: { cooperate: [-8, -1], exploit: [-15, -15], forfeit: [-3, 0] },
+            forfeit: { cooperate: [0, 0], exploit: [0, -3], forfeit: [0, 0] }
+        };
+
+        const wildWestPayoffs = {
+            cooperate: { cooperate: [4, 4], exploit: [-15, 12], forfeit: [0, 0] },
+            exploit: { cooperate: [12, -15], exploit: [-2, -2], forfeit: [1, -1] },
+            forfeit: { cooperate: [0, 0], exploit: [-1, 1], forfeit: [0, 0] }
+        };
+
+        let currentPayoffs = null;
+        let playerScore = 0;
+        let sellerScore = 0;
+        let gameActive = false;
+
+        const scenarioSelection = document.getElementById('scenario-selection');
+        const gameArea = document.getElementById('game-area');
+        const marketBtn = document.getElementById('market-btn');
+        const wildwestBtn = document.getElementById('wildwest-btn');
+        const playerActions = document.getElementById('player-actions');
+        const nextRoundBtn = document.getElementById('next-round-btn');
+        const playerScoreEl = document.getElementById('player-score');
+        const sellerScoreEl = document.getElementById('seller-score');
+        const resultDisplay = document.getElementById('result-display');
+        const resultText = document.getElementById('result-text');
+        const sellerStatus = document.getElementById('seller-status');
+        const sellerChoiceDisplay = document.getElementById('seller-choice-display');
+
+        function selectScenario(scenario) {
+            if (scenario === 'market') {
+                currentPayoffs = marketPayoffs;
+                marketBtn.classList.remove('bg-gray-300', 'text-gray-800');
+                marketBtn.classList.add('bg-blue-600', 'text-white');
+                wildwestBtn.classList.add('bg-gray-300', 'text-gray-800');
+                wildwestBtn.classList.remove('bg-blue-600', 'text-white');
+            } else {
+                currentPayoffs = wildWestPayoffs;
+                wildwestBtn.classList.remove('bg-gray-300', 'text-gray-800');
+                wildwestBtn.classList.add('bg-blue-600', 'text-white');
+                marketBtn.classList.add('bg-gray-300', 'text-gray-800');
+                marketBtn.classList.remove('bg-blue-600', 'text-white');
+            }
+            resetRound();
+            playerScore = 0;
+            sellerScore = 0;
+            updateScores();
+            gameActive = true;
+        }
+
+        function getSellerBestResponse(playerAction) {
+            let bestAction = '';
+            let maxPayoff = -Infinity;
+            const actions = ['cooperate', 'exploit', 'forfeit'];
+
+            // Find the action that maximizes the seller's payoff given the player's action
+            for (const sellerAction of actions) {
+                const sellerPayoff = currentPayoffs[playerAction][sellerAction][1];
+                if (sellerPayoff > maxPayoff) {
+                    maxPayoff = sellerPayoff;
+                    bestAction = sellerAction;
+                }
+            }
+            return bestAction;
+        }
+
+        function playRound(playerAction) {
+            if (!gameActive) return;
+            gameActive = false;
+
+            // Highlight player's choice
+            document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('selected'));
+            document.querySelector(`.action-btn[data-action="${playerAction}"]`).classList.add('selected');
+
+            const sellerAction = getSellerBestResponse(playerAction);
+
+            // Display seller's choice
+            sellerStatus.classList.add('hidden');
+            sellerChoiceDisplay.innerHTML = `
+                <div class="text-center">
+                    <p class="text-lg text-gray-600 mb-2">Seller chose:</p>
+                    <p class="text-2xl font-bold uppercase text-gray-800">${sellerAction}</p>
+                </div>
+            `;
+
+
+            const [playerPayoff, sellerPayoff] = currentPayoffs[playerAction][sellerAction];
+            playerScore += playerPayoff;
+            sellerScore += sellerPayoff;
+
+            updateScores();
+
+            resultText.innerHTML = `You chose <strong>${playerAction}</strong>, Seller chose <strong>${sellerAction}</strong>. <br> Your Payoff: <span class="font-bold ${playerPayoff > 0 ? 'text-green-600' : 'text-red-600'}">${playerPayoff}</span>, Seller's Payoff: <span class="font-bold ${sellerPayoff > 0 ? 'text-green-600' : 'text-red-600'}">${sellerPayoff}</span>`;
+            resultDisplay.classList.remove('hidden');
+            nextRoundBtn.classList.remove('hidden');
+        }
+
+        function updateScores() {
+            playerScoreEl.textContent = playerScore;
+            sellerScoreEl.textContent = sellerScore;
+        }
+
+        function resetRound() {
+            gameActive = true;
+            document.querySelectorAll('.action-btn').forEach(btn => btn.classList.remove('selected'));
+            resultDisplay.classList.add('hidden');
+            nextRoundBtn.classList.add('hidden');
+            sellerStatus.classList.remove('hidden');
+            sellerChoiceDisplay.innerHTML = '';
+            sellerChoiceDisplay.appendChild(sellerStatus);
+
+        }
+
+        marketBtn.addEventListener('click', () => selectScenario('market'));
+        wildwestBtn.addEventListener('click', () => selectScenario('wildwest'));
+        playerActions.addEventListener('click', (e) => {
+            if (e.target.tagName === 'BUTTON') {
+                playRound(e.target.dataset.action);
+            }
+        });
+        nextRoundBtn.addEventListener('click', resetRound);
+
+        // Auto-select market scenario to start
+        selectScenario('market');
+    </script>
+</body>
+</html>
+
