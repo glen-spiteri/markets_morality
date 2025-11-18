@@ -215,7 +215,7 @@
         }
 
         marketBtn.addEventListener('click', () => selectScenario('market'));
-        wildwestBtn.addEventListener('click', () => selectScenario('wildwest'));
+        wildwestBtn.addEventListener('click', () => selectScenario('non-market'));
         playerActions.addEventListener('click', (e) => {
             if (e.target.tagName === 'BUTTON') {
                 playRound(e.target.dataset.action);
